@@ -42,7 +42,7 @@
 
 #define DEF_OUTNAME "private.dat"
 
-static bool found = false;
+static volatile bool found = false;
 static size_t MutateByte;
 static uint32_t FoundNonce=0;
 static uint8_t * KeyBuf;
