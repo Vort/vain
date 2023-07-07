@@ -1,7 +1,6 @@
 #include "Crypto.h"
 #include "Identity.h"
 #include "I2PEndian.h"
-#include "key.hpp"
 #include "getopt.h"
 
 #include <regex>
@@ -41,11 +40,11 @@
 	W[i] + k)
 
 #define DEF_OUTNAME "private.dat"
+#define KEYS_FULL_LEN 679
 
 static volatile bool found = false;
-static size_t MutateByte;
-static uint32_t FoundNonce=0;
-static uint8_t * KeyBuf;
+static uint8_t OutKeys[KEYS_FULL_LEN];
+static std::mutex OutMutex;
 
 unsigned int count_cpu;
 
@@ -65,20 +64,9 @@ static struct
 {
 	bool reg = false;
 	int threads = -1;
-	i2p::data::SigningKeyType signature;
 	std::string outputpath = "";
 	std::regex regex;
-	bool sig_type = true;
 } options;
-
-void check_sig_type()
-{
-	if (SigTypeToName(options.signature).find("unknown") != std::string::npos)
-	{
-		std::cerr << "Incorrect signature type" << std::endl;
-		options.sig_type = false;
-	}
-}
 
 void inline CalculateW (const uint8_t block[64], uint32_t W[64])
 {
@@ -235,13 +223,14 @@ void processFlipper(const std::string string)
     }
 }
 
-bool thread_find(uint8_t * buf, const char * prefix, int id_thread, unsigned long long throughput)
+bool thread_find(const char * prefix)
 {
-    const unsigned long long original_throughput = throughput;
-	uint8_t b[391];
-	uint32_t hash[8];
+	auto keys = i2p::data::PrivateKeys::CreateRandomKeys(i2p::data::SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519);
 
-	memcpy (b, buf, 391);
+	uint8_t keysBuf[KEYS_FULL_LEN];
+	keys.ToBuffer(keysBuf, keys.GetFullLen());
+
+	uint32_t hash[8];
 
 	size_t len = 52;
 	
@@ -250,32 +239,25 @@ bool thread_find(uint8_t * buf, const char * prefix, int id_thread, unsigned lon
 
 	// precalculate first 5 blocks (320 bytes)
 	uint32_t state[8] = { 0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A, 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19 };
-	HashNextBlock (state, b);
-	HashNextBlock (state, b + 64);
-	HashNextBlock (state, b + 128);
-	HashNextBlock (state, b + 192);
-	HashNextBlock (state, b + 256);
+	HashNextBlock (state, keysBuf);
+	HashNextBlock (state, keysBuf + 64);
+	HashNextBlock (state, keysBuf + 128);
+	HashNextBlock (state, keysBuf + 192);
+	HashNextBlock (state, keysBuf + 256);
 
 	// pre-calculate last W
 	uint32_t lastW[64];
 	CalculateW (lastBlock, lastW);
 
-	uint32_t * nonce = (uint32_t *)(b+320);
-	(*nonce) += id_thread*throughput;
-
+	uint64_t* nonce = (uint64_t*)(keysBuf + 320);
 	char addr[53];
 	uint32_t state1[8];
 
-	while(!found)
+	while (!found)
 	{
-		if (! throughput--)
-		{
-			throughput = original_throughput;
-		}
-        
 		memcpy (state1, state, 32);
 		// calculate hash of block with nonce
-		HashNextBlock (state1, b + 320);
+		HashNextBlock (state1, keysBuf + 320);
 		// apply last block
 		TransformBlock (state1, lastW);
 		// get final hash
@@ -286,9 +268,12 @@ bool thread_find(uint8_t * buf, const char * prefix, int id_thread, unsigned lon
 		if( options.reg ? !NotThat(addr, options.regex) : !NotThat(addr, prefix) )
 		{
 			ByteStreamToBase32 ((uint8_t*)hash, 32, addr, 52);
-			std::cout << "\nFound address: " << addr << std::endl;
-			found = true;
-			FoundNonce=*nonce;
+			{
+				std::unique_lock<std::mutex> l(OutMutex);
+				std::cout << "\nFound address: " << addr << std::endl;
+				memcpy(OutKeys, keysBuf, KEYS_FULL_LEN);
+				found = true;
+			}
 			return true;
 		}
 
@@ -302,26 +287,26 @@ bool thread_find(uint8_t * buf, const char * prefix, int id_thread, unsigned lon
 	return true;
 }
 
-void usage(void){
+void usage()
+{
 	const constexpr char * help="Usage:\n"
     "  vain [text-pattern|regex-pattern] [options]\n\n"
     "OPTIONS:\n"
 	"  -h --help      show this help (same as --usage)\n"
 	"  -r --reg       use regexp instead of simple text pattern, ex.: vain '(one|two).*' -r\n"
 	"  -t --threads   number of threads to use (default: one per processor)\n"
-//	"  -s --signature (signature type)\n" // NOT IMPLEMENTED FUCKING PLAZ!
 	"  -o --output    privkey output file name (default: ./" DEF_OUTNAME ")\n"
 	"";
 	puts(help);
 }
 
-void parsing(int argc, char ** args){
+void parsing(int argc, char ** args)
+{
 	int option_index;
 	static struct option long_options[]={
 		{"help",no_argument,0,'h'},
 		{"reg", no_argument,0,'r'},
 		{"threads", required_argument, 0, 't'},
-		{"signature", required_argument,0,'s'},
 		{"output", required_argument,0,'o'},
 		{"usage", no_argument,0,0},
 		{0,0,0,0}
@@ -345,10 +330,6 @@ void parsing(int argc, char ** args){
 			case 't':
 				options.threads=atoi(optarg);
 				break;
-			case 's':
-				options.signature = NameToSigType(std::string(optarg));
-				check_sig_type();
-				break;
 			case 'o':
 				options.outputpath=optarg;
 				break;
@@ -364,7 +345,7 @@ void parsing(int argc, char ** args){
 
 int main (int argc, char * argv[])
 {
-	if ( argc < 2 )
+	if (argc < 2)
 	{
 		usage();
 		return 0;
@@ -372,95 +353,37 @@ int main (int argc, char * argv[])
     
 	parsing( argc > 2 ? argc-1 : argc, argc > 2 ? argv+1 : argv);
 	//
-	if(!options.reg && !check_prefix( argv[1] ))
+	if (!options.reg && !check_prefix( argv[1] ))
 	{
 		std::cout << "Invalid pattern." << std::endl;
 		usage();
 		return 1;
-	}else{
+	} else {
 		options.regex=std::regex(argv[1]);
 	}
 
 	i2p::crypto::InitCrypto (false, true, true, false);
-	options.signature = i2p::data::SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519;
 
-	if(options.signature != i2p::data::SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519)
-	{
-		std::cout << "ED25519-SHA512 are currently the only signing keys supported." << std::endl;
-		return 0;
-	}
-
-	if (!options.sig_type) return -2;
-	auto keys = i2p::data::PrivateKeys::CreateRandomKeys (options.signature);
-	switch(options.signature)
-	{
-		case i2p::data::SIGNING_KEY_TYPE_DSA_SHA1:
-		case i2p::data::SIGNING_KEY_TYPE_ECDSA_SHA512_P521:
-		case i2p::data::SIGNING_KEY_TYPE_RSA_SHA256_2048:
-		case i2p::data::SIGNING_KEY_TYPE_RSA_SHA384_3072:
-		case i2p::data::SIGNING_KEY_TYPE_RSA_SHA512_4096:
-		case i2p::data::SIGNING_KEY_TYPE_GOSTR3410_TC26_A_512_GOSTR3411_512:
-		std::cout << "Sorry, selected signature type is not supported for address generation." << std::endl;
-		return 0;
-		break;
-	}
-
-//TODO: for other types.
-	switch(options.signature)
-	{
-		case i2p::data::SIGNING_KEY_TYPE_ECDSA_SHA256_P256:
-		break;
-		case i2p::data::SIGNING_KEY_TYPE_ECDSA_SHA384_P384:
-		break;
-		case i2p::data::SIGNING_KEY_TYPE_ECDSA_SHA512_P521:
-		break;
-		case i2p::data::SIGNING_KEY_TYPE_RSA_SHA256_2048:
-		break;
-		case i2p::data::SIGNING_KEY_TYPE_RSA_SHA384_3072:
-		break;
-		case i2p::data::SIGNING_KEY_TYPE_RSA_SHA512_4096:
-		break;
-		case i2p::data::SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519:
-			MutateByte=320;
-		break;
-		case i2p::data::SIGNING_KEY_TYPE_GOSTR3410_CRYPTO_PRO_A_GOSTR3411_256:
-		break;
-	}
-
-	KeyBuf = new uint8_t[keys.GetFullLen()];
-	keys.ToBuffer (KeyBuf, keys.GetFullLen ());
-
-	if(options.threads <= 0)
-	{
+	if (options.threads <= 0)
 		options.threads = std::thread::hardware_concurrency();
-	}
 	
 	std::cout << "Vanity generator started in " << options.threads << " threads" << std::endl;
 
 	std::vector<std::thread> threads(options.threads);
-	unsigned long long thoughtput = 0x4F4B5A37;
-
 	for (unsigned int j = options.threads; j--; )
-	{
-		threads[j] = std::thread(thread_find, KeyBuf, argv[1], j, thoughtput);
-		thoughtput += 1000;
-	}
+		threads[j] = std::thread(thread_find, argv[1]);
 
 	processFlipper(argv[1]);
     
 	for (unsigned int j = 0; j < (unsigned int)options.threads;j++)
 		threads[j].join();
 
-	memcpy (KeyBuf + MutateByte, &FoundNonce, 4);
-
-	if(options.outputpath.empty()) options.outputpath.assign(DEF_OUTNAME);
+	if (options.outputpath.empty())
+		options.outputpath.assign(DEF_OUTNAME);
 
 	std::ofstream f (options.outputpath, std::ofstream::binary);
 	if (f)
-	{
-		f.write ((char *)KeyBuf, keys.GetFullLen ());
-		delete [] KeyBuf;
-	}
+		f.write ((char *)OutKeys, KEYS_FULL_LEN);
 	else
 		std::cout << "Can't create output file: " << options.outputpath << std::endl;
 
