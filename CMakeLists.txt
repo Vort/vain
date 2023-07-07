@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.25)
 
 project(vain)
 
+if(MSVC)
+  set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT vain)
+endif()
+
 include_directories(${CMAKE_SOURCE_DIR})
 FILE(GLOB SRC ${CMAKE_SOURCE_DIR}/*.cpp)
 

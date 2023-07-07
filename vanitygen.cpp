@@ -2,16 +2,15 @@
 #include "Identity.h"
 #include "I2PEndian.h"
 #include "key.hpp"
+#include "getopt.h"
 
 #include <regex>
 #include <mutex>
-#include <getopt.h>
 #include <iostream>
 #include <fstream>
 #include <stdlib.h>
 #include <openssl/rand.h>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 #ifdef _WIN32
