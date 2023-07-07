@@ -26,7 +26,7 @@
 
 #include "Base.h"
 #include "Tag.h"
-#include "CPU.h"
+//#include "CPU.h"
 
 // recognize openssl version and features
 #if (defined(LIBRESSL_VERSION_NUMBER) && (LIBRESSL_VERSION_NUMBER >= 0x3050200fL)) // LibreSSL 3.5.2 and above
@@ -242,6 +242,7 @@ namespace crypto
 			ECBDecryption m_ECBDecryption;
 	};
 
+/*
 	class TunnelEncryption // with double IV encryption
 	{
 		public:
@@ -277,6 +278,7 @@ namespace crypto
 			ECBDecryption m_IVDecryption;
 			CBCDecryption m_LayerDecryption;
 	};
+	*/
 
 // AEAD/ChaCha20/Poly1305
 	bool AEADChaCha20Poly1305 (const uint8_t * msg, size_t msgLen, const uint8_t * ad, size_t adLen, const uint8_t * key, const uint8_t * nonce, uint8_t * buf, size_t len, bool encrypt); // msgLen is len without tag

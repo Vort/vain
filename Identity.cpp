@@ -8,8 +8,8 @@
 
 #include "Crypto.h"
 #include "I2PEndian.h"
-#include "Log.h"
-#include "Timestamp.h"
+//#include "Log.h"
+//#include "Timestamp.h"
 #include "Identity.h"
 
 namespace i2p
@@ -96,7 +96,7 @@ namespace data
 				case SIGNING_KEY_TYPE_RSA_SHA256_2048:
 				case SIGNING_KEY_TYPE_RSA_SHA384_3072:
 				case SIGNING_KEY_TYPE_RSA_SHA512_4096:
-					LogPrint (eLogError, "Identity: RSA signing key type ", (int)type, " is not supported");
+					//LogPrint (eLogError, "Identity: RSA signing key type ", (int)type, " is not supported");
 				break;
 				case SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519:
 				case SIGNING_KEY_TYPE_REDDSA_SHA512_ED25519:
@@ -107,6 +107,7 @@ namespace data
 					memcpy (m_StandardIdentity.signingKey + padding, signingKey, i2p::crypto::EDDSA25519_PUBLIC_KEY_LENGTH);
 					break;
 				}
+				/*
 				case SIGNING_KEY_TYPE_GOSTR3410_CRYPTO_PRO_A_GOSTR3411_256:
 				{
 					// 256
@@ -122,8 +123,9 @@ namespace data
 					memcpy (m_StandardIdentity.signingKey, signingKey, i2p::crypto::GOSTR3410_512_PUBLIC_KEY_LENGTH);
 					break;
 				}
+				*/
 				default:
-					LogPrint (eLogError, "Identity: Signing key type ", (int)type, " is not supported");
+				{}//LogPrint (eLogError, "Identity: Signing key type ", (int)type, " is not supported");
 			}
 			m_ExtendedLen = 4 + excessLen; // 4 bytes extra + excess length
 			// fill certificate
@@ -136,7 +138,7 @@ namespace data
 			{
 				if (excessLen > MAX_EXTENDED_BUFFER_SIZE - 4)
 				{
-					LogPrint (eLogError, "Identity: Unexpected excessive signing key len ", excessLen);
+					//LogPrint (eLogError, "Identity: Unexpected excessive signing key len ", excessLen);
 					excessLen = MAX_EXTENDED_BUFFER_SIZE - 4;
 				}
 				memcpy (m_ExtendedBuffer + 4, excessBuf, excessLen);
@@ -222,7 +224,7 @@ namespace data
 	{
 		if (len < DEFAULT_IDENTITY_SIZE)
 		{
-			LogPrint (eLogError, "Identity: Buffer length ", len, " is too small");
+			//LogPrint (eLogError, "Identity: Buffer length ", len, " is too small");
 			return 0;
 		}
 		memcpy (&m_StandardIdentity, buf, DEFAULT_IDENTITY_SIZE);
@@ -237,7 +239,7 @@ namespace data
 			}
 			else
 			{
-				LogPrint (eLogError, "Identity: Certificate length ", m_ExtendedLen, " exceeds buffer length ", len - DEFAULT_IDENTITY_SIZE);
+				//LogPrint (eLogError, "Identity: Certificate length ", m_ExtendedLen, " exceeds buffer length ", len - DEFAULT_IDENTITY_SIZE);
 				m_ExtendedLen = 0;
 				return 0;
 			}
@@ -349,19 +351,21 @@ namespace data
 				return new i2p::crypto::ECDSAP521Verifier ();
 			case SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519:
 				return new i2p::crypto::EDDSA25519Verifier ();
+				/*
 			case SIGNING_KEY_TYPE_GOSTR3410_CRYPTO_PRO_A_GOSTR3411_256:
 				return new i2p::crypto::GOSTR3410_256_Verifier (i2p::crypto::eGOSTR3410CryptoProA);
 			case SIGNING_KEY_TYPE_GOSTR3410_TC26_A_512_GOSTR3411_512:
 				return new i2p::crypto::GOSTR3410_512_Verifier (i2p::crypto::eGOSTR3410TC26A512);
+				*/
 			case SIGNING_KEY_TYPE_REDDSA_SHA512_ED25519:
 				return new i2p::crypto::RedDSA25519Verifier ();
 			case SIGNING_KEY_TYPE_RSA_SHA256_2048:
 			case SIGNING_KEY_TYPE_RSA_SHA384_3072:
 			case SIGNING_KEY_TYPE_RSA_SHA512_4096:
-				LogPrint (eLogError, "Identity: RSA signing key type ", (int)keyType, " is not supported");
+				//LogPrint (eLogError, "Identity: RSA signing key type ", (int)keyType, " is not supported");
 			break;
 			default:
-				LogPrint (eLogError, "Identity: Signing key type ", (int)keyType, " is not supported");
+				{}//LogPrint (eLogError, "Identity: Signing key type ", (int)keyType, " is not supported");
 		}
 		return nullptr;
 	}
@@ -405,11 +409,13 @@ namespace data
 			case CRYPTO_KEY_TYPE_ECIES_P256_SHA256_AES256CBC_TEST:
 				return std::make_shared<i2p::crypto::ECIESP256Encryptor>(key);
 			break;
+			/*
 			case CRYPTO_KEY_TYPE_ECIES_GOSTR3410_CRYPTO_PRO_A_SHA256_AES256CBC:
 				return std::make_shared<i2p::crypto::ECIESGOSTR3410Encryptor>(key);
+			*/
 			break;
 			default:
-				LogPrint (eLogError, "Identity: Unknown crypto key type ", (int)keyType);
+				{}//LogPrint (eLogError, "Identity: Unknown crypto key type ", (int)keyType);
 		};
 		return nullptr;
 	}
@@ -489,7 +495,7 @@ namespace data
 			if (m_Public->GetSignatureLen () + ret > len) return 0;
 			if (!m_Public->Verify (offlineInfo, keyLen + 6, buf + ret))
 			{
-				LogPrint (eLogError, "Identity: Offline signature verification failed");
+				//LogPrint (eLogError, "Identity: Offline signature verification failed");
 				return 0;
 			}
 			ret += m_Public->GetSignatureLen ();
@@ -606,22 +612,24 @@ namespace data
 			case SIGNING_KEY_TYPE_RSA_SHA256_2048:
 			case SIGNING_KEY_TYPE_RSA_SHA384_3072:
 			case SIGNING_KEY_TYPE_RSA_SHA512_4096:
-				LogPrint (eLogError, "Identity: RSA signing key type ", (int)keyType, " is not supported");
+				//LogPrint (eLogError, "Identity: RSA signing key type ", (int)keyType, " is not supported");
 			break;
 			case SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519:
 				return new i2p::crypto::EDDSA25519Signer (priv, nullptr);
 			break;
+			/*
 			case SIGNING_KEY_TYPE_GOSTR3410_CRYPTO_PRO_A_GOSTR3411_256:
 				return new i2p::crypto::GOSTR3410_256_Signer (i2p::crypto::eGOSTR3410CryptoProA, priv);
 			break;
 			case SIGNING_KEY_TYPE_GOSTR3410_TC26_A_512_GOSTR3411_512:
 				return new i2p::crypto::GOSTR3410_512_Signer (i2p::crypto::eGOSTR3410TC26A512, priv);
 			break;
+			*/
 			case SIGNING_KEY_TYPE_REDDSA_SHA512_ED25519:
 				return new i2p::crypto::RedDSA25519Signer (priv);
 			break;
 			default:
-				LogPrint (eLogError, "Identity: Signing key type ", (int)keyType, " is not supported");
+				{}//LogPrint (eLogError, "Identity: Signing key type ", (int)keyType, " is not supported");
 		}
 		return nullptr;
 	}
@@ -666,11 +674,13 @@ namespace data
 			case CRYPTO_KEY_TYPE_ECIES_P256_SHA256_AES256CBC_TEST:
 				return std::make_shared<i2p::crypto::ECIESP256Decryptor>(key);
 			break;
+			/*
 			case CRYPTO_KEY_TYPE_ECIES_GOSTR3410_CRYPTO_PRO_A_SHA256_AES256CBC:
 				return std::make_shared<i2p::crypto::ECIESGOSTR3410Decryptor>(key);
+			*/
 			break;
 			default:
-				LogPrint (eLogError, "Identity: Unknown crypto key type ", (int)cryptoType);
+				{}//LogPrint (eLogError, "Identity: Unknown crypto key type ", (int)cryptoType);
 		};
 		return nullptr;
 	}
@@ -714,7 +724,7 @@ namespace data
 			case SIGNING_KEY_TYPE_RSA_SHA256_2048:
 			case SIGNING_KEY_TYPE_RSA_SHA384_3072:
 			case SIGNING_KEY_TYPE_RSA_SHA512_4096:
-				LogPrint (eLogWarning, "Identity: RSA signature type is not supported. Creating EdDSA");
+				//LogPrint (eLogWarning, "Identity: RSA signature type is not supported. Creating EdDSA");
 #if (__cplusplus >= 201703L) // C++ 17 or higher
 				[[fallthrough]];
 #endif
@@ -722,17 +732,19 @@ namespace data
 			case SIGNING_KEY_TYPE_EDDSA_SHA512_ED25519:
 				i2p::crypto::CreateEDDSA25519RandomKeys (priv, pub);
 			break;
+			/*
 			case SIGNING_KEY_TYPE_GOSTR3410_CRYPTO_PRO_A_GOSTR3411_256:
 				i2p::crypto::CreateGOSTR3410RandomKeys (i2p::crypto::eGOSTR3410CryptoProA, priv, pub);
 			break;
 			case SIGNING_KEY_TYPE_GOSTR3410_TC26_A_512_GOSTR3411_512:
 				i2p::crypto::CreateGOSTR3410RandomKeys (i2p::crypto::eGOSTR3410TC26A512, priv, pub);
 			break;
+			*/
 			case SIGNING_KEY_TYPE_REDDSA_SHA512_ED25519:
 				i2p::crypto::CreateRedDSA25519RandomKeys (priv, pub);
 			break;
 			default:
-				LogPrint (eLogWarning, "Identity: Signing key type ", (int)type, " is not supported. Create DSA-SHA1");
+				//LogPrint (eLogWarning, "Identity: Signing key type ", (int)type, " is not supported. Create DSA-SHA1");
 				i2p::crypto::CreateDSARandomKeys (priv, pub); // DSA-SHA1
 		}
 	}
@@ -748,14 +760,16 @@ namespace data
 			case CRYPTO_KEY_TYPE_ECIES_P256_SHA256_AES256CBC_TEST:
 				i2p::crypto::CreateECIESP256RandomKeys (priv, pub);
 			break;
+			/*
 			case CRYPTO_KEY_TYPE_ECIES_GOSTR3410_CRYPTO_PRO_A_SHA256_AES256CBC:
 				i2p::crypto::CreateECIESGOSTR3410RandomKeys (priv, pub);
 			break;
+			*/
 			case CRYPTO_KEY_TYPE_ECIES_X25519_AEAD:
 				i2p::crypto::CreateECIESX25519AEADRatchetRandomKeys (priv, pub);
 			break;
 			default:
-				LogPrint (eLogError, "Identity: Crypto key type ", (int)type, " is not supported");
+				{}//LogPrint (eLogError, "Identity: Crypto key type ", (int)type, " is not supported");
 		}
 	}
 
@@ -790,6 +804,7 @@ namespace data
 		return keys;
 	}
 
+/*
 	IdentHash CreateRoutingKey (const IdentHash& ident)
 	{
 		uint8_t buf[41]; // ident + yyyymmdd
@@ -799,6 +814,7 @@ namespace data
 		SHA256(buf, 40, key);
 		return key;
 	}
+*/
 
 	XORMetric operator^(const IdentHash& key1, const IdentHash& key2)
 	{

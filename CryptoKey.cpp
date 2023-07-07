@@ -7,8 +7,8 @@
 */
 
 #include <string.h>
-#include "Log.h"
-#include "Gost.h"
+//#include "Log.h"
+//#include "Gost.h"
 #include "CryptoKey.h"
 
 namespace i2p
@@ -42,7 +42,7 @@ namespace crypto
 		BIGNUM * x = BN_bin2bn (pub, 32, nullptr);
 		BIGNUM * y = BN_bin2bn (pub + 32, 32, nullptr);
 		if (!EC_POINT_set_affine_coordinates_GFp (m_Curve, m_PublicKey, x, y, nullptr))
-			LogPrint (eLogError, "ECICS P256 invalid public key");
+		{}//LogPrint (eLogError, "ECICS P256 invalid public key");
 		BN_free (x); BN_free (y);
 	}
 
@@ -96,6 +96,7 @@ namespace crypto
 		EC_GROUP_free (curve);
 	}
 
+/*
 	ECIESGOSTR3410Encryptor::ECIESGOSTR3410Encryptor (const uint8_t * pub)
 	{
 		auto& curve = GetGOSTR3410Curve (eGOSTR3410CryptoProA);
@@ -153,6 +154,7 @@ namespace crypto
 		EC_POINT_free (p);
 		BN_free (x); BN_free (y);
 	}
+	*/
 
 	ECIESX25519AEADRatchetEncryptor::ECIESX25519AEADRatchetEncryptor (const uint8_t * pub)
 	{

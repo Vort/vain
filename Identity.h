@@ -206,7 +206,7 @@ namespace data
 		bool operator< (const XORMetric& other) const { return memcmp (metric, other.metric, 32) < 0; };
 	};
 
-	IdentHash CreateRoutingKey (const IdentHash& ident);
+	//IdentHash CreateRoutingKey (const IdentHash& ident);
 	XORMetric operator^(const IdentHash& key1, const IdentHash& key2);
 
 	// destination for delivery instructions

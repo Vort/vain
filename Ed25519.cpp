@@ -7,7 +7,7 @@
 */
 
 #include <openssl/sha.h>
-#include "Log.h"
+//#include "Log.h"
 #include "Crypto.h"
 #include "Ed25519.h"
 
@@ -124,8 +124,8 @@ namespace crypto
 		bool passed = !memcmp (signature, diff, 32); // R
 		BN_free (h);
 		BN_CTX_free (ctx);
-		if (!passed)
-			LogPrint (eLogError, "25519 signature verification failed");
+		//if (!passed)
+		//	LogPrint (eLogError, "25519 signature verification failed");
 		return passed;
 	}
 
@@ -418,8 +418,8 @@ namespace crypto
 		BIGNUM * z = BN_new (), * t = BN_new ();
 		BN_one (z); BN_mod_mul (t, x, y, q, ctx); // pre-calculate t
 		EDDSAPoint p {x, y, z, t};
-		if (!IsOnCurve (p, ctx))
-			LogPrint (eLogError, "Decoded point is not on 25519");
+		//if (!IsOnCurve (p, ctx))
+		//	LogPrint (eLogError, "Decoded point is not on 25519");
 		return p;
 	}
 

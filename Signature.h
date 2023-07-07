@@ -17,7 +17,7 @@
 #include <openssl/evp.h>
 #include "Crypto.h"
 #include "Ed25519.h"
-#include "Gost.h"
+//#include "Gost.h"
 
 namespace i2p
 {
@@ -370,7 +370,7 @@ namespace crypto
 #endif
 	}
 
-
+/*
 	// ГОСТ Р 34.11
 	struct GOSTR3411_256_Hash
 	{
@@ -494,6 +494,7 @@ namespace crypto
 	typedef GOSTR3410Signer<GOSTR3411_256_Hash> GOSTR3410_256_Signer;
 	typedef GOSTR3410Verifier<GOSTR3411_512_Hash> GOSTR3410_512_Verifier;
 	typedef GOSTR3410Signer<GOSTR3411_512_Hash> GOSTR3410_512_Signer;
+*/
 
 	// RedDSA
 	typedef EDDSA25519Verifier RedDSA25519Verifier;

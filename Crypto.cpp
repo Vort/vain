@@ -14,19 +14,21 @@
 #include <openssl/dh.h>
 #include <openssl/md5.h>
 #include <openssl/crypto.h>
-#include "TunnelBase.h"
+//#include "TunnelBase.h"
 #include <openssl/ssl.h>
-#if OPENSSL_HKDF
+#define OPENSSL_HKDF
+//#if OPENSSL_HKDF
 #include <openssl/kdf.h>
-#endif
-#if !OPENSSL_AEAD_CHACHA20_POLY1305
-#include "ChaCha20.h"
-#include "Poly1305.h"
-#endif
+//#endif
+#define OPENSSL_AEAD_CHACHA20_POLY1305 1
+//#if !OPENSSL_AEAD_CHACHA20_POLY1305
+//#include "ChaCha20.h"
+//#include "Poly1305.h"
+//#endif
 #include "Crypto.h"
 #include "Ed25519.h"
 #include "I2PEndian.h"
-#include "Log.h"
+//#include "Log.h"
 
 namespace i2p
 {
@@ -419,7 +421,7 @@ namespace crypto
 		SHA256 (m + 33, 222, hash);
 		if (memcmp (m + 1, hash, 32))
 		{
-			LogPrint (eLogError, "ElGamal decrypt hash doesn't match");
+			//LogPrint (eLogError, "ElGamal decrypt hash doesn't match");
 			return false;
 		}
 		memcpy (data, m + 33, 222);
@@ -525,13 +527,13 @@ namespace crypto
 				memcpy (data, m + 33, 222);
 			else
 			{
-				LogPrint (eLogError, "ECIES decrypt hash doesn't match");
+				//LogPrint (eLogError, "ECIES decrypt hash doesn't match");
 				ret = false;
 			}
 		}
 		else
 		{
-			LogPrint (eLogError, "ECIES decrypt point is invalid");
+			//LogPrint (eLogError, "ECIES decrypt point is invalid");
 			ret = false;
 		}
 
@@ -891,6 +893,7 @@ namespace crypto
 			Decrypt (1, (const ChipherBlock *)in, (ChipherBlock *)out);
 	}
 
+/*
 	void TunnelEncryption::Encrypt (const uint8_t * in, uint8_t * out)
 	{
 #if defined(__AES__) && (defined(__x86_64__) || defined(__i386__))
@@ -973,7 +976,7 @@ namespace crypto
 			m_IVDecryption.Decrypt ((ChipherBlock *)out, (ChipherBlock *)out); // double iv
 		}
 	}
-
+*/
 // AEAD/ChaCha20/Poly1305
 
 	bool AEADChaCha20Poly1305 (const uint8_t * msg, size_t msgLen, const uint8_t * ad, size_t adLen, const uint8_t * key, const uint8_t * nonce, uint8_t * buf, size_t len, bool encrypt)
@@ -1287,7 +1290,7 @@ namespace crypto
 
 	void InitCrypto (bool precomputation, bool aesni, bool avx, bool force)
 	{
-		i2p::cpu::Detect (aesni, avx, force);
+		//i2p::cpu::Detect (aesni, avx, force);
 #if LEGACY_OPENSSL
 		SSL_library_init ();
 #endif

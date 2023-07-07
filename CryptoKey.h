@@ -94,7 +94,7 @@ namespace crypto
 	void CreateECIESP256RandomKeys (uint8_t * priv, uint8_t * pub);
 
 // ECIES GOST R 34.10
-
+/*
 	class ECIESGOSTR3410Encryptor: public CryptoKeyEncryptor
 	{
 		public:
@@ -124,7 +124,7 @@ namespace crypto
 	};
 
 	void CreateECIESGOSTR3410RandomKeys (uint8_t * priv, uint8_t * pub);
-
+*/
 // ECIES-X25519-AEAD-Ratchet
 
 	class ECIESX25519AEADRatchetEncryptor: public CryptoKeyEncryptor

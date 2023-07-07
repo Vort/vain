@@ -7,7 +7,7 @@
 */
 
 #include <memory>
-#include "Log.h"
+//#include "Log.h"
 #include "Signature.h"
 
 namespace i2p
@@ -80,7 +80,7 @@ namespace crypto
 		if (signingPublicKey && memcmp (m_PublicKeyEncoded, signingPublicKey, EDDSA25519_PUBLIC_KEY_LENGTH))
 		{
 			// keys don't match, it means older key with 0x1F
-			LogPrint (eLogWarning, "Older EdDSA key detected");
+			//LogPrint (eLogWarning, "Older EdDSA key detected");
 			m_ExpandedPrivateKey[EDDSA25519_PRIVATE_KEY_LENGTH - 1] &= 0xDF; // drop third bit
 			publicKey = GetEd25519 ()->GeneratePublicKey (m_ExpandedPrivateKey, ctx);
 			GetEd25519 ()->EncodePublicKey (publicKey, m_PublicKeyEncoded, ctx);
@@ -107,7 +107,7 @@ namespace crypto
 		EVP_PKEY_get_raw_public_key (pkey, publicKey, &len);
 		if (signingPublicKey && memcmp (publicKey, signingPublicKey, EDDSA25519_PUBLIC_KEY_LENGTH))
 		{
-			LogPrint (eLogWarning, "EdDSA public key mismatch. Fallback");
+			//LogPrint (eLogWarning, "EdDSA public key mismatch. Fallback");
 			m_Fallback = new EDDSA25519SignerCompat (signingPrivateKey, signingPublicKey);
 		}
 		else
