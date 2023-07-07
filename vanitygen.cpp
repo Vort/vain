@@ -45,6 +45,7 @@
 
 static bool found = false;
 static size_t MutateByte;
+static uint32_t FoundNonce=0;
 static uint8_t * KeyBuf;
 
 unsigned int count_cpu;
@@ -288,6 +289,7 @@ bool thread_find(uint8_t * buf, const char * prefix, int id_thread, unsigned lon
 			ByteStreamToBase32 ((uint8_t*)hash, 32, addr, 52);
 			std::cout << "\nFound address: " << addr << std::endl;
 			found = true;
+			FoundNonce=*nonce;
 			return true;
 		}
 
@@ -449,6 +451,8 @@ int main (int argc, char * argv[])
     
 	for (unsigned int j = 0; j < (unsigned int)options.threads;j++)
 		threads[j].join();
+
+	memcpy (KeyBuf + MutateByte, &FoundNonce, 4);
 
 	if(options.outputpath.empty()) options.outputpath.assign(DEF_OUTNAME);
 
