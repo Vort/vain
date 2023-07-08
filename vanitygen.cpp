@@ -11,11 +11,13 @@
 #include <regex>
 #include <mutex>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <stdlib.h>
-#include <openssl/rand.h>
 #include <thread>
 #include <vector>
+#include <ctime>
+#include <atomic>
 
 #ifdef _WIN32
   #include <windows.h>
@@ -45,11 +47,16 @@
 	W[i] + k)
 
 #define DEF_OUTNAME "private.dat"
+#define ADDR_BUF_LEN 53
 #define KEYS_FULL_LEN 679
 
-static volatile bool found = false;
+static std::atomic_bool found(false);
+static std::atomic_int HashesCount(0);
+static char OutAddr[ADDR_BUF_LEN];
 static uint8_t OutKeys[KEYS_FULL_LEN];
 static std::mutex OutMutex;
+static std::chrono::high_resolution_clock::time_point StartTime;
+static std::chrono::high_resolution_clock::time_point PrevStatTime;
 
 unsigned int count_cpu;
 
@@ -184,48 +191,45 @@ inline bool NotThat(const char * a, const char *b)
 	return false;
 }
 
-void processFlipper(const std::string string)
+void ShowStats(int threadCount, const std::string pattern)
 {
-    constexpr char SYMBOLS[] {'-', '\\', '|', '/'};
-    uint8_t symbol_counter = 0;
-    std::string payload = string;
-    if (payload.back() != ' ') payload += ' ';
-    
-    size_t current_state = payload.size();
-    enum { left, right } direction = left;
-    
-    std::cout << payload << SYMBOLS[symbol_counter++];
-    while (!found)
-    {
-        std::cout << '\b' << SYMBOLS[symbol_counter++];
-        std::cout.flush();
-        
-        if (symbol_counter == sizeof(SYMBOLS))
-        {
-            if (direction == left)
-            {
-                std::cout << '\b';
-                std::cout.flush();
-                symbol_counter = 0;
-                if (!--current_state)
-                {
-                    direction = right;
-                }
-            }
-            else if (direction == right)
-            {
-                std::cout << '\b' << payload[current_state] << " ";
-                std::cout.flush();
-                symbol_counter = 0;
-                
-                if (++current_state == payload.size())
-                {
-                    direction = left;
-                }
-            }
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(80));
-    }
+	bool statLineDisplayed = false;
+	std::cout << "Threads: " << threadCount << " | Pattern: " << pattern << std::endl;
+	for (;;)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			if (found)
+				break;
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		}
+		if (found)
+			break;
+		auto now = std::chrono::high_resolution_clock::now();
+		double usecElapsedSincePrevStat = std::chrono::duration_cast<
+			std::chrono::microseconds>(now - PrevStatTime).count();
+		double mhps = HashesCount / usecElapsedSincePrevStat;
+		HashesCount = 0;
+		PrevStatTime = now;
+
+		auto elapsed = now - StartTime;
+		auto hrs = std::chrono::duration_cast<std::chrono::hours>(elapsed);
+		auto mins = std::chrono::duration_cast<std::chrono::minutes>(elapsed - hrs);
+		auto secs = std::chrono::duration_cast<std::chrono::seconds>(elapsed - hrs - mins);
+
+		std::cout << "\rElapsed: ";
+		std::cout << std::setfill('0') << std::right;
+		std::cout << std::setw(2) << hrs.count() << ":";
+		std::cout << std::setw(2) << mins.count() << ":";
+		std::cout << std::setw(2) << secs.count();
+		std::cout << " | " << "Speed: ";
+		std::cout << std::setfill(' ');
+		std::cout << std::setw(6) << std::fixed << std::setprecision(2) << mhps << " MH/s";
+		std::cout << std::flush;
+		statLineDisplayed = true;
+	}
+	if (statLineDisplayed)
+		std::cout << std::endl;
 }
 
 bool thread_find(const char * prefix)
@@ -255,7 +259,7 @@ bool thread_find(const char * prefix)
 	CalculateW (lastBlock, lastW);
 
 	uint64_t* nonce = (uint64_t*)(keysBuf + 320);
-	char addr[53];
+	char addr[ADDR_BUF_LEN];
 	uint32_t state1[8];
 
 	while (!found)
@@ -270,23 +274,17 @@ bool thread_find(const char * prefix)
 			hash[j] = htobe32(state1[j]);
 		ByteStreamToBase32 ((uint8_t*)hash, 32, addr, len);
 
-		if( options.reg ? !NotThat(addr, options.regex) : !NotThat(addr, prefix) )
+		if ( options.reg ? !NotThat(addr, options.regex) : !NotThat(addr, prefix) )
 		{
-			ByteStreamToBase32 ((uint8_t*)hash, 32, addr, 52);
-			{
-				std::unique_lock<std::mutex> l(OutMutex);
-				std::cout << "\nFound address: " << addr << std::endl;
-				memcpy(OutKeys, keysBuf, KEYS_FULL_LEN);
-				found = true;
-			}
+			std::unique_lock<std::mutex> l(OutMutex);
+			ByteStreamToBase32((uint8_t*)hash, 32, OutAddr, 52);
+			memcpy(OutKeys, keysBuf, KEYS_FULL_LEN);
+			found = true;
 			return true;
 		}
 
 		(*nonce)++;
-		if (found)
-		{
-			break;
-		}
+		HashesCount++;
 	}
 	
 	return true;
@@ -371,17 +369,19 @@ int main (int argc, char * argv[])
 
 	if (options.threads <= 0)
 		options.threads = std::thread::hardware_concurrency();
-	
-	std::cout << "Vanity generator started in " << options.threads << " threads" << std::endl;
 
+	StartTime = std::chrono::high_resolution_clock::now();
+	PrevStatTime = StartTime;
 	std::vector<std::thread> threads(options.threads);
-	for (unsigned int j = options.threads; j--; )
+	for (int j = 0; j < options.threads; j++)
 		threads[j] = std::thread(thread_find, argv[1]);
 
-	processFlipper(argv[1]);
+	ShowStats(options.threads, argv[1]);
     
-	for (unsigned int j = 0; j < (unsigned int)options.threads;j++)
+	for (int j = 0; j < options.threads; j++)
 		threads[j].join();
+
+	std::cout << "Found address: " << OutAddr << std::endl;
 
 	if (options.outputpath.empty())
 		options.outputpath.assign(DEF_OUTNAME);
