@@ -7,10 +7,10 @@ if(MSVC)
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR})
-FILE(GLOB SRC ${CMAKE_SOURCE_DIR}/*.cpp)
+FILE(GLOB SRC ${CMAKE_SOURCE_DIR}/*.cpp ${CMAKE_SOURCE_DIR}/*.c)
 
 if(NOT WIN32)
-  list(REMOVE_ITEM SRC ${CMAKE_SOURCE_DIR}/wingetopt.cpp)
+  list(REMOVE_ITEM SRC ${CMAKE_SOURCE_DIR}/wingetopt.c)
 endif()
 
 # Linux guys can't handle static link
@@ -20,6 +20,10 @@ endif()
 
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
+
+if(OPENSSL_VERSION VERSION_GREATER_EQUAL "3.0.0")
+  add_definitions(-DOPENSSL_SUPPRESS_DEPRECATED)
+endif()
 
 add_executable("${PROJECT_NAME}" ${SRC})
 

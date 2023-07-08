@@ -16,16 +16,14 @@
 #include <openssl/crypto.h>
 //#include "TunnelBase.h"
 #include <openssl/ssl.h>
-#define OPENSSL_HKDF
-//#if OPENSSL_HKDF
-#include <openssl/kdf.h>
-//#endif
-#define OPENSSL_AEAD_CHACHA20_POLY1305 1
-//#if !OPENSSL_AEAD_CHACHA20_POLY1305
-//#include "ChaCha20.h"
-//#include "Poly1305.h"
-//#endif
 #include "Crypto.h"
+#if OPENSSL_HKDF
+#include <openssl/kdf.h>
+#endif
+#if !OPENSSL_AEAD_CHACHA20_POLY1305
+#include "ChaCha20.h"
+#include "Poly1305.h"
+#endif
 #include "Ed25519.h"
 #include "I2PEndian.h"
 //#include "Log.h"
