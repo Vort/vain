@@ -1,7 +1,12 @@
 #include "Crypto.h"
 #include "Identity.h"
 #include "I2PEndian.h"
-#include "getopt.h"
+
+#ifdef _WIN32
+  #include "wingetopt.h"
+#else
+  #include <getopt.h>
+#endif
 
 #include <regex>
 #include <mutex>
@@ -13,7 +18,7 @@
 #include <vector>
 
 #ifdef _WIN32
-#include <windows.h>
+  #include <windows.h>
 #endif
 
 // sha256
