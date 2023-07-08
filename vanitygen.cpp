@@ -46,11 +46,12 @@
 	S[(70 - i) % 8], S[(71 - i) % 8], \
 	W[i] + k)
 
-#define DEF_OUTNAME "private.dat"
+#define BLOCK_SIZE 4096
 #define ADDR_BUF_LEN 53
 #define KEYS_FULL_LEN 679
+#define DEF_OUTNAME "private.dat"
 
-static std::atomic_bool found(false);
+static std::atomic_bool GlobalFound(false);
 static std::atomic_int HashesCount(0);
 static char OutAddr[ADDR_BUF_LEN];
 static uint8_t OutKeys[KEYS_FULL_LEN];
@@ -199,11 +200,11 @@ void ShowStats(int threadCount, const std::string pattern)
 	{
 		for (int i = 0; i < 5; i++)
 		{
-			if (found)
+			if (GlobalFound)
 				break;
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
 		}
-		if (found)
+		if (GlobalFound)
 			break;
 		auto now = std::chrono::high_resolution_clock::now();
 		double usecElapsedSincePrevStat = std::chrono::duration_cast<
@@ -262,29 +263,34 @@ bool thread_find(const char * prefix)
 	char addr[ADDR_BUF_LEN];
 	uint32_t state1[8];
 
-	while (!found)
+	while (!GlobalFound)
 	{
-		memcpy (state1, state, 32);
-		// calculate hash of block with nonce
-		HashNextBlock (state1, keysBuf + 320);
-		// apply last block
-		TransformBlock (state1, lastW);
-		// get final hash
-		for (int j = 8; j--;)
-			hash[j] = htobe32(state1[j]);
-		ByteStreamToBase32 ((uint8_t*)hash, 32, addr, len);
-
-		if ( options.reg ? !NotThat(addr, options.regex) : !NotThat(addr, prefix) )
+		bool localFound = false;
+		for (int i = 0; i < BLOCK_SIZE; i++)
 		{
-			std::unique_lock<std::mutex> l(OutMutex);
-			ByteStreamToBase32((uint8_t*)hash, 32, OutAddr, 52);
-			memcpy(OutKeys, keysBuf, KEYS_FULL_LEN);
-			found = true;
-			return true;
-		}
+			memcpy(state1, state, 32);
+			// calculate hash of block with nonce
+			HashNextBlock(state1, keysBuf + 320);
+			// apply last block
+			TransformBlock(state1, lastW);
+			// get final hash
+			for (int j = 8; j--;)
+				hash[j] = htobe32(state1[j]);
+			ByteStreamToBase32((uint8_t*)hash, 32, addr, len);
 
-		(*nonce)++;
-		HashesCount++;
+			if (options.reg ? !NotThat(addr, options.regex) : !NotThat(addr, prefix))
+			{
+				std::unique_lock<std::mutex> l(OutMutex);
+				ByteStreamToBase32((uint8_t*)hash, 32, OutAddr, 52);
+				memcpy(OutKeys, keysBuf, KEYS_FULL_LEN);
+				localFound = true;
+			}
+
+			(*nonce)++;
+		}
+		if (localFound)
+			GlobalFound = true;
+		HashesCount += BLOCK_SIZE;
 	}
 	
 	return true;
